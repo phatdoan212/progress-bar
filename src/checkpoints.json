@@ -1,0 +1,5 @@
+[
+  { "quizCompleted": true,  "quizPassed": true,  "type": 0, "percentPos": 20 },
+  { "quizCompleted": true,  "quizPassed": false, "type": 1, "percentPos": 50 },
+  { "quizCompleted": false, "quizPassed": false, "type": 2, "percentPos": 80 }
+]
