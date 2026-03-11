@@ -110,7 +110,11 @@ export default function App() {
       } else if (key === 'totalPageNum') {
         next.progressBarPercentage = Math.round(next.currentPageNum / value * 100)
       } else if (key === 'progressBarPercentage') {
-        next.currentPageNum = Math.round(value / 100 * next.totalPageNum)
+        const pageSize = 100 / next.totalPageNum
+        const exactPage = value / pageSize
+        if (Number.isInteger(Math.round(exactPage * 1000) / 1000)) {
+          next.currentPageNum = Math.round(exactPage)
+        }
       }
       const vm = vmBBRef.current
       if (vm) {
