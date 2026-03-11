@@ -29,8 +29,8 @@ export default function App() {
     progressBarPercentage: 10,
     currentModuleNum: 3,
     totalModuleNum: 8,
-    currentPageNum: 5,
-    totalPageNum: 12,
+    currentPageNum: 1,
+    totalPageNum: 10,
     // ★ STAR ANIMATION – how many stars the user has earned (0–3)
     starEarned: 1,
     // ★ STAR ANIMATION – booleans that control which star celebration plays
@@ -104,10 +104,25 @@ export default function App() {
   const handleBBChange = useCallback((key, value) => {
     setBbValues(prev => {
       const next = { ...prev, [key]: value }
+      // Maintain: progressBarPercentage = (currentPageNum / totalPageNum) * 100
+      if (key === 'currentPageNum') {
+        next.progressBarPercentage = Math.round(value / next.totalPageNum * 100)
+      } else if (key === 'totalPageNum') {
+        next.progressBarPercentage = Math.round(next.currentPageNum / value * 100)
+      } else if (key === 'progressBarPercentage') {
+        next.currentPageNum = Math.round(value / 100 * next.totalPageNum)
+      }
       const vm = vmBBRef.current
       if (vm) {
-        if (typeof value === 'boolean') vm.boolean(key)?.value !== undefined && (vm.boolean(key).value = value)
-        else vm.number(key)?.value !== undefined && (vm.number(key).value = Number(value))
+        if (typeof value === 'boolean') {
+          vm.boolean(key)?.value !== undefined && (vm.boolean(key).value = value)
+        } else {
+          vm.number(key)?.value !== undefined && (vm.number(key).value = Number(value))
+          if (key === 'currentPageNum' || key === 'totalPageNum')
+            vm.number('progressBarPercentage')?.value !== undefined && (vm.number('progressBarPercentage').value = next.progressBarPercentage)
+          if (key === 'progressBarPercentage')
+            vm.number('currentPageNum')?.value !== undefined && (vm.number('currentPageNum').value = next.currentPageNum)
+        }
       }
       return next
     })
@@ -186,7 +201,10 @@ export default function App() {
         {/* ── Right: editor ── */}
         <div className={styles.editorCol}>
           <div className={styles.orientToggle}>
-            <span className={styles.dimLabel}>Simulate orientation:</span>
+            <h2 className={styles.orientHeader}>
+              Simulate Orientation
+              <span className={styles.orientTag}>Responsive</span>
+            </h2>
             <OrientButtons isPortrait={isPortrait} onSimulate={setSimOrientation} />
           </div>
           <ControlPanel
@@ -194,8 +212,6 @@ export default function App() {
             checkpoints={checkpoints}
             onBBChange={handleBBChange}
             onLaunchStar={handleLaunchStar}
-            onCheckpointsChange={handleCheckpointsChange}
-            onPreset={handlePreset}
           />
         </div>
       </div>
@@ -205,18 +221,15 @@ export default function App() {
 
 function OrientButtons({ isPortrait, onSimulate }) {
   return (
-    <div style={{ display: 'flex', gap: 8 }}>
-      <SimBtn label="Portrait" active={isPortrait} onClick={() => onSimulate('portrait')} />
-      <SimBtn label="Landscape" active={!isPortrait} onClick={() => onSimulate('landscape')} />
+    <div className={styles.tabSwitch}>
+      <button
+        className={`${styles.tabBtn} ${isPortrait ? styles.tabBtnActive : ''}`}
+        onClick={() => onSimulate('portrait')}
+      >Portrait</button>
+      <button
+        className={`${styles.tabBtn} ${!isPortrait ? styles.tabBtnActive : ''}`}
+        onClick={() => onSimulate('landscape')}
+      >Landscape</button>
     </div>
-  )
-}
-
-function SimBtn({ label, active, onClick }) {
-  return (
-    <button onClick={onClick} style={{
-      padding: '4px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-      background: active ? '#3a5a8a' : '#2a2a3a', color: '#fff', fontSize: 12,
-    }}>{label}</button>
   )
 }

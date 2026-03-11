@@ -23,40 +23,33 @@ function Row({ label, tags, children }) {
 function Slider({ value, min = 0, max = 100, step = 1, onChange }) {
   const [text, setText] = useState(String(value))
 
-  // Keep text in sync when value changes externally (e.g. from slider drag or preset)
   useEffect(() => { setText(String(value)) }, [value])
 
-  function commit(raw) {
+  function handleChange(raw) {
+    setText(raw)
     const n = Number(raw)
     if (!isNaN(n) && raw.trim() !== '') {
       onChange(Math.min(max, Math.max(min, n)))
-    } else {
-      setText(String(value)) // revert if invalid
     }
   }
 
   return (
-    <>
-      <input type="range" min={min} max={max} step={step} value={value}
-        onChange={e => onChange(Number(e.target.value))} className={s.slider} />
-      <input
-        type="number" className={s.numInput}
-        value={text} min={min} max={max} step={step}
-        onChange={e => setText(e.target.value)}
-        onBlur={e => commit(e.target.value)}
-        onKeyDown={e => {
-          if (e.key === 'Enter') { commit(e.target.value); e.target.blur(); return }
-          if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
-            e.preventDefault()
-            const n = Number(text)
-            if (!isNaN(n)) {
-              const delta = e.key === 'ArrowUp' ? 10 : -10
-              onChange(Math.min(max, Math.max(min, n + delta)))
-            }
+    <input
+      type="number" className={s.numInput}
+      value={text} min={min} max={max} step={step}
+      onChange={e => handleChange(e.target.value)}
+      onBlur={() => { if (text.trim() === '' || isNaN(Number(text))) setText(String(value)) }}
+      onKeyDown={e => {
+        if (e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+          e.preventDefault()
+          const n = Number(text)
+          if (!isNaN(n)) {
+            const delta = e.key === 'ArrowUp' ? 10 : -10
+            onChange(Math.min(max, Math.max(min, n + delta)))
           }
-        }}
-      />
-    </>
+        }
+      }}
+    />
   )
 }
 
@@ -70,27 +63,39 @@ function Check({ checked, onChange }) {
 // ─── ControlPanel ────────────────────────────────────────────────────────────
 export default function ControlPanel({
   bbValues, checkpoints,
-  onBBChange, onLaunchStar, onCheckpointsChange, onPreset,
+  onBBChange, onLaunchStar,
 }) {
-  const [editIdx, setEditIdx] = useState(0)
-
-  function applyCheckpointState(key, value) {
-    const next = checkpoints.map((cp, i) =>
-      i === editIdx ? { ...cp, [key]: value } : cp
-    )
-    onCheckpointsChange(next)
-  }
-
-  const cp = checkpoints[editIdx] ?? {}
-
   return (
     <div className={s.panels}>
 
-      {/* ── BottomBarVM ── */}
+      {/* ── Star Animations ── */}
       <div className={s.panel}>
-        <h2>BottomBarVM <Tag label="Bottom Bar Machine" color="#2a4a7a" /></h2>
+        {/* ★ STAR ANIMATION ─────────────────────────────────────────────────────
+            playSingleStar / playDoubleStars / playTripleStars: booleans that
+            select which celebration animation plays (1, 2 or 3 stars).
+            launchStar: Rive trigger that actually fires the animation.
+        ──────────────────────────────────────────────────────────────────────── */}
+        <h2>Star Animations <STAR /></h2>
+        <Row label="playSingleStar">
+          <Check checked={bbValues.playSingleStar} onChange={v => onBBChange('playSingleStar', v)} />
+        </Row>
+        <Row label="playDoubleStars">
+          <Check checked={bbValues.playDoubleStars} onChange={v => onBBChange('playDoubleStars', v)} />
+        </Row>
+        <Row label="playTripleStars">
+          <Check checked={bbValues.playTripleStars} onChange={v => onBBChange('playTripleStars', v)} />
+        </Row>
+        <div className={s.btnRow}>
+          {/* ★ STAR ANIMATION – click to fire the launchStar Rive trigger */}
+          <button className={s.btn} onClick={onLaunchStar}>launchStar (Trigger)</button>
+        </div>
+      </div>
 
-        <Row label="progressBarPercentage " tags={<><PB /><MOB /></>}>
+      {/* ── Progress Bar Controller ── */}
+      <div className={s.panel}>
+        <h2>Progress Bar Controller <Tag label="Bottom Bar Machine" color="#2a4a7a" /></h2>
+
+        <Row label="progressBarPercentage " tags={<PB />}>
           <Slider value={bbValues.progressBarPercentage} max={100}
             onChange={v => onBBChange('progressBarPercentage', v)} />
         </Row>
@@ -115,11 +120,11 @@ export default function ControlPanel({
           <Slider value={bbValues.starEarned} max={3}
             onChange={v => onBBChange('starEarned', v)} />
         </Row>
+      </div>
 
-        <hr className={s.divider} />
-
-        {/* Checkpoint summary (read-only) */}
-        <h2>checkpointList <Tag label="PB" color="#2a4a7a" /></h2>
+      {/* ── checkpointList ── */}
+      <div className={s.panel}>
+        <h2>Quiz Checkpoint Data <Tag label="PB" color="#2a4a7a" /></h2>
         <div className={s.cpList}>
           {checkpoints.map((cp, i) => (
             <div key={i} className={s.cpRow}>
@@ -132,62 +137,6 @@ export default function ControlPanel({
               </span>
             </div>
           ))}
-        </div>
-
-        <hr className={s.divider} />
-
-        {/* ★ STAR ANIMATION ─────────────────────────────────────────────────────
-            playSingleStar / playDoubleStars / playTripleStars: booleans that
-            select which celebration animation plays (1, 2 or 3 stars).
-            launchStar: Rive trigger that actually fires the animation.
-        ──────────────────────────────────────────────────────────────────────── */}
-        <h2>Star Animations <STAR /></h2>
-        <Row label="playSingleStar">
-          <Check checked={bbValues.playSingleStar} onChange={v => onBBChange('playSingleStar', v)} />
-        </Row>
-        <Row label="playDoubleStars">
-          <Check checked={bbValues.playDoubleStars} onChange={v => onBBChange('playDoubleStars', v)} />
-        </Row>
-        <Row label="playTripleStars">
-          <Check checked={bbValues.playTripleStars} onChange={v => onBBChange('playTripleStars', v)} />
-        </Row>
-        <div className={s.btnRow}>
-          {/* ★ STAR ANIMATION – click to fire the launchStar Rive trigger */}
-          <button className={s.btn} onClick={onLaunchStar}>launchStar (Trigger)</button>
-        </div>
-      </div>
-
-      {/* ── QuizCheckpointVM ── */}
-      <div className={s.panel}>
-        <h2>QuizCheckpointVM <span className={s.sub}>CheckpointSM</span></h2>
-        <p className={s.hint}>Select a checkpoint to update its quiz state.</p>
-
-        <Row label="Edit index">
-          <select className={s.select} value={editIdx}
-            onChange={e => setEditIdx(Number(e.target.value))}>
-            {checkpoints.map((cp, i) =>
-              <option key={i} value={i}>Checkpoint {i} – {cp.percentPos}%</option>
-            )}
-          </select>
-        </Row>
-        <Row label="quizCompleted">
-          <Check checked={!!cp.quizCompleted}
-            onChange={v => applyCheckpointState('quizCompleted', v)} />
-        </Row>
-        <Row label="quizPassed">
-          <Check checked={!!cp.quizPassed}
-            onChange={v => applyCheckpointState('quizPassed', v)} />
-        </Row>
-
-        <hr className={s.divider} />
-
-        <h2>Presets</h2>
-        <div className={s.btnRow}>
-          <button className={s.btn} onClick={() => onPreset('start')}>Start (0%)</button>
-          <button className={s.btn} onClick={() => onPreset('mid')}>Mid (45%)</button>
-          <button className={s.btn} onClick={() => onPreset('complete')}>Complete (100%)</button>
-          <button className={s.btn} onClick={() => onPreset('quizPass')}>Quiz Pass</button>
-          <button className={s.btn} onClick={() => onPreset('quizFail')}>Quiz Fail</button>
         </div>
       </div>
     </div>
