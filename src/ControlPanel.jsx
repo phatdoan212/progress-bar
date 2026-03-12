@@ -63,7 +63,7 @@ function Check({ checked, onChange }) {
 // ─── ControlPanel ────────────────────────────────────────────────────────────
 export default function ControlPanel({
   bbValues, checkpoints,
-  onBBChange, onLaunchStar,
+  onBBChange, onLaunchStar, onCheckpointsChange,
 }) {
   return (
     <div className={s.panels}>
@@ -120,23 +120,54 @@ export default function ControlPanel({
           <Slider value={bbValues.starEarned} max={3}
             onChange={v => onBBChange('starEarned', v)} />
         </Row>
+        <Row label="showAllCounters " tags={<PB />}>
+          <Check checked={bbValues.showAllCounters} onChange={v => onBBChange('showAllCounters', v)} />
+        </Row>
       </div>
 
       {/* ── checkpointList ── */}
       <div className={s.panel}>
         <h2>Quiz Checkpoint Data <Tag label="PB" color="#2a4a7a" /></h2>
         <div className={s.cpList}>
-          {checkpoints.map((cp, i) => (
-            <div key={i} className={s.cpRow}>
-              <span className={s.cpInfo}>
-                [{i}] pos <b>{cp.percentPos}%</b> · <b>{CHECKPOINT_TYPES[cp.type] ?? cp.type}</b>
-                · done <b style={{ color: cp.quizCompleted ? '#4ade80' : '#f87171' }}>
-                  {String(cp.quizCompleted)}</b>
-                · pass <b style={{ color: cp.quizPassed ? '#4ade80' : '#f87171' }}>
-                  {String(cp.quizPassed)}</b>
-              </span>
-            </div>
-          ))}
+          {checkpoints.map((cp, i) => {
+            function update(field, val) {
+              onCheckpointsChange(checkpoints.map((c, j) => j === i ? { ...c, [field]: val } : c))
+            }
+            return (
+              <div key={i} className={s.cpCard}>
+                <div className={s.cpCardTop}>
+                  <span className={s.cpIdx}>#{i}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Slider value={cp.percentPos} min={0} max={100}
+                      onChange={v => update('percentPos', v)} />
+                  </div>
+                  <select className={s.select} value={cp.type}
+                    onChange={e => update('type', Number(e.target.value))}>
+                    {CHECKPOINT_TYPES.map((t, idx) => <option key={idx} value={idx}>{t}</option>)}
+                  </select>
+                  <button className={s.rmBtn}
+                    onClick={() => onCheckpointsChange(checkpoints.filter((_, j) => j !== i))}>×</button>
+                </div>
+                <div className={s.cpCardBot}>
+                  <label className={s.cpCheckLabel}>
+                    <input type="checkbox" className={s.checkbox} checked={cp.quizCompleted}
+                      onChange={e => update('quizCompleted', e.target.checked)} />
+                    completed
+                  </label>
+                  <label className={s.cpCheckLabel}>
+                    <input type="checkbox" className={s.checkbox} checked={cp.quizPassed}
+                      onChange={e => update('quizPassed', e.target.checked)} />
+                    passed
+                  </label>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div className={s.btnRow}>
+          <button className={s.btn} onClick={() =>
+            onCheckpointsChange([...checkpoints, { quizCompleted: false, quizPassed: false, type: 0, percentPos: 0 }])
+          }>+ Add Checkpoint</button>
         </div>
       </div>
     </div>

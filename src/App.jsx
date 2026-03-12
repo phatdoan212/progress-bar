@@ -4,7 +4,7 @@ import ControlPanel from './ControlPanel'
 import styles from './App.module.css'
 import DEFAULT_CHECKPOINTS from './checkpoints.json'
 
-// ─── Detect orientation ─────────────────────────────────────────────────────
+// ─── Detect real device orientation ─────────────────────────────────────────
 function useOrientation() {
   const [isPortrait, setIsPortrait] = useState(
     () => window.innerHeight > window.innerWidth
@@ -19,11 +19,15 @@ function useOrientation() {
 }
 
 export default function App() {
+  // ─── Simulated orientation (controls canvas rendering) ───────────────────
   const realIsPortrait = useOrientation()
   const [simOrientation, setSimOrientation] = useState(null) // null = real device
   const isPortrait = simOrientation !== null ? simOrientation === 'portrait' : realIsPortrait
+
+  // ─── Preview ratio (drives the badge) ────────────────────────────────────
+  const [previewIsPortrait, setPreviewIsPortrait] = useState(false)
+
   const [status, setStatus] = useState('loading')  // 'loading' | 'ready' | 'error'
-  // Checkpoints are static – loaded from JSON once, only state (completed/passed) can change
   const [checkpoints, setCheckpoints] = useState(DEFAULT_CHECKPOINTS)
   const [bbValues, setBbValues] = useState({
     progressBarPercentage: 10,
@@ -31,16 +35,47 @@ export default function App() {
     totalModuleNum: 8,
     currentPageNum: 1,
     totalPageNum: 10,
-    // ★ STAR ANIMATION – how many stars the user has earned (0–3)
     starEarned: 1,
-    // ★ STAR ANIMATION – booleans that control which star celebration plays
     playSingleStar: false,
     playDoubleStars: false,
     playTripleStars: false,
+    showAllCounters: true,
   })
 
   const vmBBRef = useRef(null)
   const vmQCRef = useRef(null)
+  const [previewWidth, setPreviewWidth] = useState(null)
+  const previewColRef = useRef(null)
+
+  // ─── Badge: watch actual preview column ratio ─────────────────────────────
+  useEffect(() => {
+    const el = previewColRef.current
+    if (!el) return
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect
+      setPreviewIsPortrait(height > 0 && width / height <= 1)
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  // ─── Resize handle drag ───────────────────────────────────────────────────
+  const startResize = useCallback((e) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = previewColRef.current.getBoundingClientRect().width
+    const bodyWidth = previewColRef.current.parentElement.getBoundingClientRect().width
+    const maxWidth = bodyWidth - 340 - 16 // editor col + resize handle
+    function onMove(e) {
+      setPreviewWidth(Math.min(maxWidth, Math.max(150, startWidth + e.clientX - startX)))
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove)
+      document.removeEventListener('mouseup', onUp)
+    }
+    document.addEventListener('mousemove', onMove)
+    document.addEventListener('mouseup', onUp)
+  }, [])
 
   const { RiveComponent, rive } = useRive({
     src: '/progressbar.riv',
@@ -69,11 +104,9 @@ export default function App() {
   // ─── Write helpers ─────────────────────────────────────────────────────────
   function applyBBValues(inst, vals) {
     const numbers = ['progressBarPercentage','currentModuleNum','totalModuleNum',
-                     'currentPageNum','totalPageNum',
-                     'starEarned'] // ★ STAR ANIMATION
+                     'currentPageNum','totalPageNum','starEarned']
     numbers.forEach(k => inst.number(k)?.value !== undefined && (inst.number(k).value = Number(vals[k])))
-    // ★ STAR ANIMATION – boolean flags that trigger the star celebration animations
-    const bools = ['playSingleStar','playDoubleStars','playTripleStars']
+    const bools = ['playSingleStar','playDoubleStars','playTripleStars','showAllCounters']
     bools.forEach(k => inst.boolean(k)?.value !== undefined && (inst.boolean(k).value = Boolean(vals[k])))
   }
 
@@ -81,15 +114,12 @@ export default function App() {
     if (!bbInst) return
     const list = bbInst.list('checkpointList')
     if (!list) return
-    // Grow list to match checkpoint count
     while (list.length < cps.length && qcVM) {
       const item = qcVM.instance()
       if (item) list.addInstance(item)
       else break
     }
-    // Snapshot all items first, then set – avoids list re-sort mid-iteration
     const items = Array.from({ length: list.length }, (_, i) => list.instanceAt(i))
-    // Set properties on each item
     cps.forEach((cp, i) => {
       const item = items[i]
       if (!item) return
@@ -104,7 +134,6 @@ export default function App() {
   const handleBBChange = useCallback((key, value) => {
     setBbValues(prev => {
       const next = { ...prev, [key]: value }
-      // Maintain: progressBarPercentage = (currentPageNum / totalPageNum) * 100
       if (key === 'currentPageNum') {
         next.progressBarPercentage = Math.round(value / next.totalPageNum * 100)
       } else if (key === 'totalPageNum') {
@@ -132,54 +161,19 @@ export default function App() {
     })
   }, [])
 
-  // ★ STAR ANIMATION – fires the launchStar Rive trigger to play the star burst effect
   const handleLaunchStar = useCallback(() => {
     vmBBRef.current?.trigger('launchStar')?.trigger()
   }, [])
 
-  // Update only checkpoint states (quizCompleted / quizPassed) – list size stays fixed
   const handleCheckpointsChange = useCallback((newCps) => {
     setCheckpoints(newCps)
     pushCheckpoints(vmBBRef.current, vmQCRef.current, newCps)
   }, [])
 
-  const handlePreset = useCallback((preset) => {
-    let newVals = { ...bbValues }
-    let newCps  = checkpoints
-
-    if (preset === 'start') {
-      newVals = { ...newVals, progressBarPercentage: 0, currentModuleNum: 0,
-                  currentPageNum: 0,
-                  starEarned: 0,                                              // ★ STAR ANIMATION
-                  playSingleStar: false, playDoubleStars: false, playTripleStars: false } // ★ STAR ANIMATION
-    } else if (preset === 'mid') {
-      newVals = { ...newVals, progressBarPercentage: 45, currentModuleNum: 3,
-                  totalModuleNum: 8, currentPageNum: 5, totalPageNum: 12,
-                  starEarned: 1,                                              // ★ STAR ANIMATION
-                  playSingleStar: true, playDoubleStars: false, playTripleStars: false } // ★ STAR ANIMATION
-    } else if (preset === 'complete') {
-      newVals = { ...newVals, progressBarPercentage: 100, currentModuleNum: 8,
-                  totalModuleNum: 8, currentPageNum: 12, totalPageNum: 12,
-                  starEarned: 3,                                              // ★ STAR ANIMATION
-                  playSingleStar: false, playDoubleStars: false, playTripleStars: true } // ★ STAR ANIMATION
-    } else if (preset === 'quizPass') {
-      newCps = checkpoints.map(cp => ({ ...cp, quizCompleted: true, quizPassed: true }))
-    } else if (preset === 'quizFail') {
-      newCps = checkpoints.map(cp => ({ ...cp, quizCompleted: true, quizPassed: false }))
-    }
-
-    setBbValues(newVals)
-    setCheckpoints(newCps)
-    const vm = vmBBRef.current
-    if (vm) {
-      applyBBValues(vm, newVals)
-      pushCheckpoints(vm, vmQCRef.current, newCps)
-    }
-  }, [bbValues, checkpoints])
-
-  const canvasStyle = isPortrait
-    ? { width: '100%', aspectRatio: '9/16', maxHeight: '80vh' }
-    : { width: '100%', aspectRatio: '16/9', maxHeight: '75vh' }
+  const canvasStyle = { width: '100%', height: '100%' }
+  const canvasWrapStyle = isPortrait
+    ? { aspectRatio: '9/16', width: '100%', height: 'auto', maxHeight: '100%', flex: 'none', alignSelf: 'center' }
+    : undefined
 
   return (
     <div className={styles.app}>
@@ -190,32 +184,39 @@ export default function App() {
           <span>{status === 'ready' ? 'Rive loaded – ViewModels ready'
                 : status === 'error' ? 'Load error'
                 : 'Loading…'}</span>
-          <span className={styles.orientBadge}>{isPortrait ? '📱 Portrait' : '🖥 Landscape'}</span>
+          <span className={styles.orientBadge}>{previewIsPortrait ? '📱 Portrait' : '🖥 Landscape'}</span>
         </div>
       </div>
 
       <div className={styles.body}>
         {/* ── Left: preview ── */}
-        <div className={styles.previewCol}>
-          <div className={styles.canvasWrap} style={isPortrait ? { maxWidth: 390, alignSelf: 'center' } : undefined}>
+        <div
+          ref={previewColRef}
+          className={styles.previewCol}
+          style={previewWidth ? { flex: 'none', width: previewWidth } : undefined}
+        >
+          <div className={styles.canvasWrap} style={canvasWrapStyle}>
             <RiveComponent style={canvasStyle} />
           </div>
         </div>
 
+        <div className={styles.resizeHandle} onMouseDown={startResize} />
+
         {/* ── Right: editor ── */}
         <div className={styles.editorCol}>
-          <div className={styles.orientToggle}>
+          <div className={styles.orientToggle} style={{ display: 'none' }}>
             <h2 className={styles.orientHeader}>
               Simulate Orientation
               <span className={styles.orientTag}>Responsive</span>
             </h2>
-            <OrientButtons isPortrait={isPortrait} onSimulate={setSimOrientation} />
+            <OrientButtons isPortrait={isPortrait} onSimulate={(o) => { setSimOrientation(o); setPreviewWidth(null) }} />
           </div>
           <ControlPanel
             bbValues={bbValues}
             checkpoints={checkpoints}
             onBBChange={handleBBChange}
             onLaunchStar={handleLaunchStar}
+            onCheckpointsChange={handleCheckpointsChange}
           />
         </div>
       </div>

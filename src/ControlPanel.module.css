@@ -107,31 +107,62 @@
   white-space: nowrap;
 }
 
-/* ── Checkpoint list ── */
+/* ── Checkpoint list / editor ── */
 .cpList {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
-.cpRow {
+.cpCard {
+  background: #0f0f18;
+  border: 1px solid #2a2a3a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cpCardTop {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.72rem;
-  color: #a0a0b0;
 }
-.cpInfo { flex: 1; min-width: 0; }
-.cpInfo b { color: #fff; }
+.cpIdx {
+  font-size: 0.7rem;
+  color: #6060a0;
+  font-weight: 600;
+  min-width: 22px;
+}
+.cpPosLabel {
+  font-size: 0.74rem;
+  color: #6060a0;
+}
+.cpCardBot {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.cpCheckLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  color: #9090a0;
+  cursor: pointer;
+  user-select: none;
+}
 .rmBtn {
   padding: 2px 8px;
-  font-size: 0.7rem;
+  font-size: 0.78rem;
   background: #3a2a2a;
   color: #f87171;
   border: none;
   border-radius: 6px;
   cursor: pointer;
   flex-shrink: 0;
+  font-family: inherit;
+  font-weight: 600;
 }
 
 /* ── Buttons ── */
