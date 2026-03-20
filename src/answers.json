@@ -1,0 +1,4 @@
+[
+  { "quizLabel": "Check sender addresses", "correctAnswer": true },
+  { "quizLabel": "Always respond immediately to requests for sensitive information", "correctAnswer": false }
+]

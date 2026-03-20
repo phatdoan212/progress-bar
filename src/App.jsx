@@ -1,8 +1,11 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { useRive, Layout, Fit } from '@rive-app/react-webgl2'
 import ControlPanel from './ControlPanel'
+import QuizLayout from './QuizLayout'
 import styles from './App.module.css'
 import DEFAULT_CHECKPOINTS from './checkpoints.json'
+import DEFAULT_ANSWERS from './answers.json'
+import { generateRiveTheme, hexToRiveColor, detectAppearance } from './themeGenerator'
 
 // ─── Detect real device orientation ─────────────────────────────────────────
 function useOrientation() {
@@ -42,8 +45,11 @@ export default function App() {
     showAllCounters: true,
   })
 
+  const [answers, setAnswers] = useState(DEFAULT_ANSWERS)
+  const [theme, setTheme] = useState({ bg: '#1A1C34', accent: '#1473F3' })
   const vmBBRef = useRef(null)
   const vmQCRef = useRef(null)
+  const vmQARef = useRef(null)
   const [previewWidth, setPreviewWidth] = useState(null)
   const previewColRef = useRef(null)
 
@@ -86,7 +92,17 @@ export default function App() {
     onLoadError: () => setStatus((s) => s === 'ready' ? s : 'error'),
   })
 
-  // ─── Bind BottomBarVM once, push checkpoints once ──────────────────────────
+  // ─── Write helpers ─────────────────────────────────────────────────────────
+  function applyTheme(inst, t) {
+    if (!inst) return
+    const colors = generateRiveTheme(t.bg, t.accent)  // appearance auto-detected from bg
+    Object.entries(colors).forEach(([name, hex]) => {
+      const prop = inst.color(name)
+      if (prop) prop.value = hexToRiveColor(hex)
+    })
+  }
+
+  // ─── Bind BottomBarVM once, push data once ─────────────────────────────────
   useEffect(() => {
     if (!rive || status !== 'ready') return
     const bbVM = rive.viewModelByName('BottomBarVM')
@@ -96,12 +112,14 @@ export default function App() {
     rive.bindViewModelInstance(inst)
     vmBBRef.current = inst
     vmQCRef.current = rive.viewModelByName('QuizCheckpointVM')
+    vmQARef.current = rive.viewModelByName('QuizAnswerVM')
 
     applyBBValues(inst, bbValues)
     pushCheckpoints(inst, vmQCRef.current, DEFAULT_CHECKPOINTS)
+    pushAnswers(inst, vmQARef.current, DEFAULT_ANSWERS)
+    applyTheme(inst, theme)
   }, [rive, status])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─── Write helpers ─────────────────────────────────────────────────────────
   function applyBBValues(inst, vals) {
     const numbers = ['progressBarPercentage','currentModuleNum','totalModuleNum',
                      'currentPageNum','totalPageNum','starEarned']
@@ -130,7 +148,32 @@ export default function App() {
     })
   }
 
+  function pushAnswers(bbInst, qaVM, ans) {
+    if (!bbInst) return
+    const list = bbInst.list('answerList')
+    if (!list) return
+    while (list.length < ans.length && qaVM) {
+      const item = qaVM.instance()
+      if (item) list.addInstance(item)
+      else break
+    }
+    const items = Array.from({ length: list.length }, (_, i) => list.instanceAt(i))
+    ans.forEach((a, i) => {
+      const item = items[i]
+      if (!item) return
+      item.string('quizLabel')?.value !== undefined && (item.string('quizLabel').value = a.quizLabel)
+      item.boolean('correctAnswer')?.value !== undefined && (item.boolean('correctAnswer').value = a.correctAnswer)
+      item.number('numberProperty')?.value !== undefined && (item.number('numberProperty').value = i)
+    })
+  }
+
   // ─── Update handlers ───────────────────────────────────────────────────────
+  const handleThemeChange = useCallback((newTheme) => {
+    const t = { bg: newTheme.bg, accent: newTheme.accent }
+    setTheme(t)
+    applyTheme(vmBBRef.current, t)
+  }, [])
+
   const handleBBChange = useCallback((key, value) => {
     setBbValues(prev => {
       const next = { ...prev, [key]: value }
@@ -170,10 +213,10 @@ export default function App() {
     pushCheckpoints(vmBBRef.current, vmQCRef.current, newCps)
   }, [])
 
-  const canvasStyle = { width: '100%', height: '100%' }
-  const canvasWrapStyle = isPortrait
-    ? { aspectRatio: '9/16', width: '100%', height: 'auto', maxHeight: '100%', flex: 'none', alignSelf: 'center' }
-    : undefined
+  const handleAnswersChange = useCallback((newAnswers) => {
+    setAnswers(newAnswers)
+    pushAnswers(vmBBRef.current, vmQARef.current, newAnswers)
+  }, [])
 
   return (
     <div className={styles.app}>
@@ -195,9 +238,7 @@ export default function App() {
           className={styles.previewCol}
           style={previewWidth ? { flex: 'none', width: previewWidth } : undefined}
         >
-          <div className={styles.canvasWrap} style={canvasWrapStyle}>
-            <RiveComponent style={canvasStyle} />
-          </div>
+          <QuizLayout RiveComponent={RiveComponent} answers={answers} />
         </div>
 
         <div className={styles.resizeHandle} onMouseDown={startResize} />
@@ -214,9 +255,13 @@ export default function App() {
           <ControlPanel
             bbValues={bbValues}
             checkpoints={checkpoints}
+            answers={answers}
+            theme={theme}
             onBBChange={handleBBChange}
             onLaunchStar={handleLaunchStar}
             onCheckpointsChange={handleCheckpointsChange}
+            onAnswersChange={handleAnswersChange}
+            onThemeChange={handleThemeChange}
           />
         </div>
       </div>

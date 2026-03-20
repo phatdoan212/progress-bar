@@ -60,13 +60,65 @@ function Check({ checked, onChange }) {
   )
 }
 
+// ─── ColorInput ──────────────────────────────────────────────────────────────
+function ColorInput({ label, value, onChange }) {
+  const [hex, setHex] = useState(value)
+
+  useEffect(() => { setHex(value) }, [value])
+
+  function handleText(raw) {
+    setHex(raw)
+    if (/^#[0-9A-Fa-f]{6}$/.test(raw)) onChange(raw)
+  }
+
+  function handlePicker(raw) {
+    setHex(raw)
+    onChange(raw)
+  }
+
+  return (
+    <div className={s.colorRow}>
+      <span className={s.colorLabel}>{label}</span>
+      <input
+        type="color"
+        className={s.colorPicker}
+        value={/^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : '#000000'}
+        onChange={e => handlePicker(e.target.value)}
+      />
+      <input
+        type="text"
+        className={s.colorHex}
+        value={hex}
+        onChange={e => handleText(e.target.value)}
+        maxLength={7}
+        spellCheck={false}
+      />
+    </div>
+  )
+}
+
 // ─── ControlPanel ────────────────────────────────────────────────────────────
 export default function ControlPanel({
-  bbValues, checkpoints,
-  onBBChange, onLaunchStar, onCheckpointsChange,
+  bbValues, checkpoints, answers, theme,
+  onBBChange, onLaunchStar, onCheckpointsChange, onAnswersChange, onThemeChange,
 }) {
   return (
     <div className={s.panels}>
+
+      {/* ── Theme Colors ── */}
+      <div className={s.panel}>
+        <h2>Theme Colors <Tag label="Theme" color="#5a2a7a" /></h2>
+        <ColorInput
+          label="Background / Base"
+          value={theme.bg}
+          onChange={v => onThemeChange({ ...theme, bg: v })}
+        />
+        <ColorInput
+          label="Accent / Primary"
+          value={theme.accent}
+          onChange={v => onThemeChange({ ...theme, accent: v })}
+        />
+      </div>
 
       {/* ── Star Animations ── */}
       <div className={s.panel}>
@@ -168,6 +220,45 @@ export default function ControlPanel({
           <button className={s.btn} onClick={() =>
             onCheckpointsChange([...checkpoints, { quizCompleted: false, quizPassed: false, type: 0, percentPos: 0 }])
           }>+ Add Checkpoint</button>
+        </div>
+      </div>
+
+      {/* ── answerList ── */}
+      <div className={s.panel}>
+        <h2>Quiz Answer Options <Tag label="PB" color="#2a4a7a" /></h2>
+        <div className={s.cpList}>
+          {answers.map((ans, i) => {
+            function update(field, val) {
+              onAnswersChange(answers.map((a, j) => j === i ? { ...a, [field]: val } : a))
+            }
+            return (
+              <div key={i} className={s.cpCard}>
+                <div className={s.cpCardTop}>
+                  <span className={s.cpIdx}>#{i}</span>
+                  <input
+                    className={s.textInput}
+                    value={ans.quizLabel}
+                    onChange={e => update('quizLabel', e.target.value)}
+                    placeholder="Answer text…"
+                  />
+                  <button className={s.rmBtn}
+                    onClick={() => onAnswersChange(answers.filter((_, j) => j !== i))}>×</button>
+                </div>
+                <div className={s.cpCardBot}>
+                  <label className={s.cpCheckLabel}>
+                    <input type="checkbox" className={s.checkbox} checked={ans.correctAnswer}
+                      onChange={e => update('correctAnswer', e.target.checked)} />
+                    correct answer
+                  </label>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <div className={s.btnRow}>
+          <button className={s.btn} onClick={() =>
+            onAnswersChange([...answers, { quizLabel: '', correctAnswer: false }])
+          }>+ Add Answer</button>
         </div>
       </div>
     </div>

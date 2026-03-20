@@ -1,0 +1,21 @@
+.page {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #0E1128;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.riveWrapper {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+}
+.riveInner {
+  position: absolute;
+  inset: 0;
+}

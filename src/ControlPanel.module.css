@@ -165,6 +165,61 @@
   font-weight: 600;
 }
 
+.textInput {
+  flex: 1;
+  min-width: 0;
+  background: #0f0f13;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  color: #ccd6f6;
+  font-family: inherit;
+  font-size: 0.78rem;
+  padding: 4px 8px;
+  outline: none;
+}
+.textInput:focus { border-color: #4a9eff; }
+
+/* ── Color inputs ── */
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.colorLabel {
+  font-size: 0.78rem;
+  color: #9090a0;
+  flex: 1;
+  white-space: nowrap;
+}
+.colorPicker {
+  width: 32px;
+  height: 28px;
+  padding: 2px;
+  border: 1px solid #3a3a4a;
+  border-radius: 6px;
+  background: #2a2a3a;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.colorPicker::-webkit-color-swatch-wrapper { padding: 0; }
+.colorPicker::-webkit-color-swatch { border: none; border-radius: 4px; }
+.colorHex {
+  width: 80px;
+  background: #0f0f13;
+  border: 1px solid #2a2a3a;
+  border-radius: 6px;
+  color: #ccd6f6;
+  font-family: monospace;
+  font-size: 0.78rem;
+  padding: 4px 8px;
+  outline: none;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.colorHex:focus { border-color: #4a9eff; }
+
+
 /* ── Buttons ── */
 .btn {
   background: #1473F3;
