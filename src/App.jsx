@@ -43,6 +43,7 @@ export default function App() {
     playDoubleStars: false,
     playTripleStars: false,
     showAllCounters: true,
+    navButtonsWidth: 196,
   })
 
   const [answers, setAnswers] = useState(DEFAULT_ANSWERS)
@@ -122,7 +123,7 @@ export default function App() {
 
   function applyBBValues(inst, vals) {
     const numbers = ['progressBarPercentage','currentModuleNum','totalModuleNum',
-                     'currentPageNum','totalPageNum','starEarned']
+                     'currentPageNum','totalPageNum','starEarned','navButtonsWidth']
     numbers.forEach(k => inst.number(k)?.value !== undefined && (inst.number(k).value = Number(vals[k])))
     const bools = ['playSingleStar','playDoubleStars','playTripleStars','showAllCounters']
     bools.forEach(k => inst.boolean(k)?.value !== undefined && (inst.boolean(k).value = Boolean(vals[k])))
@@ -217,6 +218,7 @@ export default function App() {
     setAnswers(newAnswers)
     pushAnswers(vmBBRef.current, vmQARef.current, newAnswers)
   }, [])
+
 
   return (
     <div className={styles.app}>

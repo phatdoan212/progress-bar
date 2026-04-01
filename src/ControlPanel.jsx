@@ -175,6 +175,10 @@ export default function ControlPanel({
         <Row label="showAllCounters " tags={<PB />}>
           <Check checked={bbValues.showAllCounters} onChange={v => onBBChange('showAllCounters', v)} />
         </Row>
+        <Row label="navButtonsWidth " tags={<PB />}>
+          <Slider value={bbValues.navButtonsWidth} min={0} max={400}
+            onChange={v => onBBChange('navButtonsWidth', v)} />
+        </Row>
       </div>
 
       {/* ── checkpointList ── */}
@@ -223,44 +227,6 @@ export default function ControlPanel({
         </div>
       </div>
 
-      {/* ── answerList ── */}
-      <div className={s.panel}>
-        <h2>Quiz Answer Options <Tag label="PB" color="#2a4a7a" /></h2>
-        <div className={s.cpList}>
-          {answers.map((ans, i) => {
-            function update(field, val) {
-              onAnswersChange(answers.map((a, j) => j === i ? { ...a, [field]: val } : a))
-            }
-            return (
-              <div key={i} className={s.cpCard}>
-                <div className={s.cpCardTop}>
-                  <span className={s.cpIdx}>#{i}</span>
-                  <input
-                    className={s.textInput}
-                    value={ans.quizLabel}
-                    onChange={e => update('quizLabel', e.target.value)}
-                    placeholder="Answer text…"
-                  />
-                  <button className={s.rmBtn}
-                    onClick={() => onAnswersChange(answers.filter((_, j) => j !== i))}>×</button>
-                </div>
-                <div className={s.cpCardBot}>
-                  <label className={s.cpCheckLabel}>
-                    <input type="checkbox" className={s.checkbox} checked={ans.correctAnswer}
-                      onChange={e => update('correctAnswer', e.target.checked)} />
-                    correct answer
-                  </label>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-        <div className={s.btnRow}>
-          <button className={s.btn} onClick={() =>
-            onAnswersChange([...answers, { quizLabel: '', correctAnswer: false }])
-          }>+ Add Answer</button>
-        </div>
-      </div>
     </div>
   )
 }
